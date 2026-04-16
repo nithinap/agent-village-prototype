@@ -21,6 +21,8 @@ It translates this brief into:
 - a data model extension strategy that keeps sensitive memory out of public tables
 - scaling and observability notes for the take-home
 
+A concrete build sequence based on that design now lives in [docs/implementation-plan.md](./docs/implementation-plan.md).
+
 ---
 
 ## Context

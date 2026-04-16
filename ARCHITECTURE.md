@@ -23,6 +23,8 @@ Design follow-ups for each interaction case live under [`docs/design/`](./docs/d
 - [`case-3-public-contract.md`](./docs/design/case-3-public-contract.md)
 - [`case-3-resolved.md`](./docs/design/case-3-resolved.md)
 
+The execution sequence for turning this design into a prototype lives in [`docs/implementation-plan.md`](./docs/implementation-plan.md).
+
 ## Proposed System
 
 ```mermaid
