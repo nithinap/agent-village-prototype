@@ -4,6 +4,9 @@
 
 Design the owner-agent interaction path so the agent can build a meaningful long-term relationship without creating privacy leaks or unbounded prompt growth.
 
+The high-level reasoning for case 1 lives here. The concrete design contract now lives in [case-1-owner-contract.md](./case-1-owner-contract.md).
+The settled decisions are summarized in [case-1-resolved.md](./case-1-resolved.md).
+
 ## Working Assumptions
 
 - each agent has exactly one owner
@@ -177,7 +180,7 @@ Ownership is determined by backend authentication, never by user-provided claims
 - every owner-chat request carries authenticated user identity
 - backend loads the target agent's canonical `owner_id`
 - backend compares authenticated user with stored owner
-- if they do not match, the request is rejected or downgraded to visitor behavior
+- if they do not match, the owner-only request is rejected with `403 Forbidden`
 
 ### Non-goal
 
@@ -239,10 +242,20 @@ The main controls are:
 
 ## Open Decisions
 
-- should memory records be tagged by type such as `fact`, `preference`, `relationship`, `event`, `goal`?
-- should the system store embeddings for private memories from day one, or begin with keyword/tag retrieval?
-- should failed owner-auth attempts be logged as security events?
-- should public-safe abstractions be stored explicitly, or generated on demand from private context?
+- how aggressively should old owner messages be summarized once the thread becomes large?
+- should summary refresh be triggered by message count, token volume, elapsed time, or a hybrid threshold?
+- should public-safe abstractions eventually move into a separate projection table?
+
+Current direction from the owner contract:
+
+- yes to typed memory records
+- start without embeddings
+- yes to logging failed owner-auth attempts
+- yes to storing public-safe abstractions explicitly
+- reject failed owner auth with `403` on the owner endpoint
+- use one persistent owner thread per agent-owner pair
+- assign memory importance with backend rules plus bounded model adjustment
+- validate memory writes through a lightweight redaction gate
 
 ## Acceptance Criteria For This Design
 
@@ -253,4 +266,4 @@ We can consider case 1 sufficiently designed when we agree on:
 3. the retrieval recipe for assembling an owner prompt
 4. the rule that prevents owner-private memory from being visible to stranger/public flows
 
-Only after those are clear should implementation begin.
+Those are now settled in the linked contract and resolved-state documents.

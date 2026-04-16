@@ -14,6 +14,14 @@ Design follow-ups for each interaction case live under [`docs/design/`](./docs/d
 
 - [`interaction-model.md`](./docs/design/interaction-model.md)
 - [`case-1-owner-interaction.md`](./docs/design/case-1-owner-interaction.md)
+- [`case-1-owner-contract.md`](./docs/design/case-1-owner-contract.md)
+- [`case-1-resolved.md`](./docs/design/case-1-resolved.md)
+- [`case-2-stranger-interaction.md`](./docs/design/case-2-stranger-interaction.md)
+- [`case-2-stranger-contract.md`](./docs/design/case-2-stranger-contract.md)
+- [`case-2-resolved.md`](./docs/design/case-2-resolved.md)
+- [`case-3-public-interaction.md`](./docs/design/case-3-public-interaction.md)
+- [`case-3-public-contract.md`](./docs/design/case-3-public-contract.md)
+- [`case-3-resolved.md`](./docs/design/case-3-resolved.md)
 
 ## Proposed System
 
