@@ -164,7 +164,7 @@ Do **not** store owner-private facts in publicly readable `living_memory` as shi
 | `agent_public_state` | cooldown checks use a simple query on `living_diary.created_at` |
 | `agent_public_events` | publish/drop outcomes log to `agent_runs` |
 
-Recommended private table shape:
+Recommended private table shape (MVP — deferred fields like `importance`, `dedupe_key`, and `source_message_id` are designed in the case contracts but omitted here):
 
 ```sql
 agent_relationship_memory(
@@ -172,9 +172,9 @@ agent_relationship_memory(
   agent_id uuid not null,
   owner_id text not null,
   memory_text text not null,
-  sensitivity text not null, -- private | derived | shareable
-  source text not null,      -- owner_chat | agent_inference | manual
-  last_used_at timestamptz,
+  memory_type text not null,    -- fact | preference | relationship | event
+  sensitivity text not null,    -- private | derived_public_safe
+  source text not null,         -- owner_chat | agent_inference
   created_at timestamptz default now()
 )
 ```
@@ -193,8 +193,9 @@ Implementation rule: the model never receives owner-private memory unless `actor
 
 ### Owner conversation
 
-1. Request arrives with `agentId`, authenticated `ownerId`, and message text.
-2. Backend loads:
+1. Request arrives at `POST /v1/owner/agents/:agentId/chat` with `X-Owner-Id` header and message text.
+2. Backend checks `X-Owner-Id` against `agent_owners.owner_id`. Returns `403` on mismatch.
+3. Backend loads:
    - agent profile
    - recent owner thread
    - top private memories for this owner-agent pair
@@ -205,7 +206,7 @@ Implementation rule: the model never receives owner-private memory unless `actor
 
 ### Stranger conversation
 
-1. Request arrives with `actor_type = visitor`.
+1. Request arrives at `POST /v1/visitor/agents/:agentId/chat` with `visitor_session_id` in the body. No `X-Owner-Id` header.
 2. Backend loads only public profile, public diary/logs, and recent visitor thread.
 3. Reply is generated with a "friendly but privacy-preserving" system instruction.
 4. No owner-private tables are read or written.
@@ -253,7 +254,7 @@ Important: privacy should not depend on prompt text alone. Prompting is the last
 Track every agent decision in `agent_runs`:
 
 - `agent_id`
-- `run_type` (`owner_chat`, `visitor_chat`, `proactive_post`, `bootstrap`)
+- `run_type` (`owner_chat`, `visitor_chat`, `proactive_post`)
 - input summary
 - selected memory ids
 - output type
@@ -303,35 +304,37 @@ The demo script (`docs/demo-script.md`) is the acceptance test. It tells a concr
 
 This narrative exercises all three trust contexts across two agents and proves the core architecture.
 
-## Suggested Repo Shape
+## Repo Shape
 
 ```text
 backend/
   src/
     api/
+      owner.ts        # POST /v1/owner/agents/:agentId/chat
+      visitor.ts       # POST /v1/visitor/agents/:agentId/chat
+      internal.ts      # POST /v1/internal/agents/:agentId/public-act
+      health.ts        # GET /health
     agents/
-    memory/
-    scheduler/
-    llm/
+      orchestrator.ts  # context assembly + LLM call + output routing
+      prompts.ts       # prompt templates for owner, visitor, public
     db/
+      client.ts        # Supabase client
+      queries.ts       # all DB queries
+    scheduler/
+      worker.ts        # poll loop for agent_jobs
     observability/
+      runs.ts          # agent_runs logger
+  migrations/
+    001_private_tables.sql
   scripts/
+    demo.sh
 docs/
+  design/              # case contracts and interaction models
+  implementation-plan.md
+  demo-script.md
+  readme-traceability.md
 ```
 
-For this take-home, the minimal vertical slice is:
+## Key Design Principle
 
-1. one chat endpoint supporting owner vs visitor
-2. one private memory table
-3. one worker loop that creates a diary post
-4. one short demo script proving the trust boundary
-
-## First Change To Make
-
-Before building features, fix the data boundary:
-
-- stop exposing owner-private memory through public `living_memory`
-- move sensitive memory into a backend-only table
-- treat existing frontend-readable tables as public projections only
-
-That one decision will keep the rest of the system honest.
+The public `living_*` tables are a **projection layer** — the frontend reads them directly via Supabase anon key. Owner-private data lives exclusively in backend-only tables that the frontend never sees. This single decision keeps the rest of the system honest.
