@@ -29,7 +29,7 @@ At the end of implementation we should be able to demonstrate:
 
 The MVP includes:
 
-- one backend service (Node.js/TypeScript with Express or Fastify)
+- one backend service (Python / FastAPI)
 - one migration file extending the starter schema with 6 private tables
 - one owner chat endpoint
 - one visitor chat endpoint
@@ -110,8 +110,8 @@ Create the backend skeleton.
 
 Deliverables:
 
-- `backend/` project with TypeScript, Express/Fastify, dotenv
-- Supabase client setup (service role key for backend writes)
+- `backend/` project with Python, FastAPI, python-dotenv
+- Supabase client setup (supabase-py with service role key for backend writes)
 - `GET /health` endpoint
 - basic request logging
 
@@ -234,26 +234,28 @@ Verification checklist:
 
 ```text
 backend/
-  src/
+  app/
     api/
-      owner.ts        # POST /v1/owner/agents/:agentId/chat
-      visitor.ts       # POST /v1/visitor/agents/:agentId/chat
-      internal.ts      # POST /v1/internal/agents/:agentId/public-act
-      health.ts        # GET /health
+      owner.py        # POST /v1/owner/agents/:agentId/chat
+      visitor.py       # POST /v1/visitor/agents/:agentId/chat
+      internal.py      # POST /v1/internal/agents/:agentId/public-act
+      health.py        # GET /health
     agents/
-      orchestrator.ts  # context assembly + LLM call + output routing
-      prompts.ts       # prompt templates for owner, visitor, public
+      orchestrator.py  # context assembly + LLM call + output routing
+      prompts.py       # prompt templates for owner, visitor, public
     db/
-      client.ts        # Supabase client
-      queries.ts       # all DB queries
+      client.py        # Supabase client
+      queries.py       # all DB queries
     scheduler/
-      worker.ts        # poll loop for agent_jobs
+      worker.py        # poll loop for agent_jobs
     observability/
-      runs.ts          # agent_runs logger
+      runs.py          # agent_runs logger
+    main.py            # FastAPI app entry point
   migrations/
     001_private_tables.sql
   scripts/
     demo.sh            # executable demo script
+  requirements.txt
 ```
 
 ## Time Budget

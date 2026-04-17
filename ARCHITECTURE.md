@@ -308,26 +308,28 @@ This narrative exercises all three trust contexts across two agents and proves t
 
 ```text
 backend/
-  src/
+  app/
     api/
-      owner.ts        # POST /v1/owner/agents/:agentId/chat
-      visitor.ts       # POST /v1/visitor/agents/:agentId/chat
-      internal.ts      # POST /v1/internal/agents/:agentId/public-act
-      health.ts        # GET /health
+      owner.py        # POST /v1/owner/agents/:agentId/chat
+      visitor.py       # POST /v1/visitor/agents/:agentId/chat
+      internal.py      # POST /v1/internal/agents/:agentId/public-act
+      health.py        # GET /health
     agents/
-      orchestrator.ts  # context assembly + LLM call + output routing
-      prompts.ts       # prompt templates for owner, visitor, public
+      orchestrator.py  # context assembly + LLM call + output routing
+      prompts.py       # prompt templates for owner, visitor, public
     db/
-      client.ts        # Supabase client
-      queries.ts       # all DB queries
+      client.py        # Supabase client
+      queries.py       # all DB queries
     scheduler/
-      worker.ts        # poll loop for agent_jobs
+      worker.py        # poll loop for agent_jobs
     observability/
-      runs.ts          # agent_runs logger
+      runs.py          # agent_runs logger
+    main.py            # FastAPI app entry point
   migrations/
     001_private_tables.sql
   scripts/
     demo.sh
+  requirements.txt
 docs/
   design/              # case contracts and interaction models
   implementation-plan.md
