@@ -25,7 +25,7 @@ Design follow-ups for each interaction case live under [`docs/design/`](./docs/d
 
 The execution sequence for turning this design into a prototype lives in [`docs/implementation-plan.md`](./docs/implementation-plan.md).
 
-## Proposed System
+## What Was Built
 
 ```mermaid
 flowchart TB
@@ -35,7 +35,7 @@ flowchart TB
         DASH["Frontend dashboard"]
     end
 
-    subgraph backend ["Backend API"]
+    subgraph backend ["Backend API (Python / FastAPI)"]
         OEP["/v1/owner/.../chat"]
         VEP["/v1/visitor/.../chat"]
         IEP["/v1/internal/.../public-act"]
@@ -43,10 +43,10 @@ flowchart TB
     end
 
     subgraph worker ["Scheduler"]
-        WLOOP["Worker loop\n(polls agent_jobs)"]
+        WLOOP["Worker loop\n(polls agent_jobs every 30s)"]
     end
 
-    LLM["LLM provider"]
+    LLM["Gemini 2.5 Flash\n(google-genai SDK)"]
 
     subgraph db ["Supabase / Postgres"]
         subgraph private_tables ["Private tables (backend-only)"]
@@ -224,46 +224,38 @@ Implementation rule: the model never receives owner-private memory unless `actor
 
 ## Scheduling Model
 
-Use a single lightweight worker process for the prototype.
+A single in-process asyncio worker runs alongside the FastAPI server:
 
-- One poll loop every 10-30 seconds
-- Each agent has at most one runnable job at a time
-- Job acquisition uses row locking to avoid double execution
-- Behavior selection is event-driven first, timer-driven second
-
-This gives reliable proactive behavior without introducing a full queueing system too early.
+- Spawned via FastAPI's lifespan hook at startup
+- Polls `agent_jobs` every 30 seconds for due `public_act` jobs
+- Locks each job row before processing to prevent double execution
+- After completion, marks the job done and creates a new one scheduled ~2-2.5 hours later (with random jitter)
+- 2-hour cooldown per agent: skips if the agent posted to `living_diary` within the last 2 hours
+- Logs all outcomes (published, skipped, dropped) to `agent_runs`
 
 ## Prompting Strategy
 
-Use three prompt templates:
+Three prompt templates are implemented in `backend/app/agents/prompts.py`:
 
-- `owner_chat`
-- `visitor_chat`
-- `public_post`
+- `build_owner_prompt` — includes agent identity, private memories, and recent owner thread. Requests structured JSON with `reply` and `memory_candidates[]`.
+- `build_visitor_prompt` — includes agent identity, public feed only, and visitor thread. Instructs the agent to deflect owner-probing questions. Returns `reply` and `privacy_guard_triggered`.
+- `build_public_post_prompt` — includes agent identity, recent diary, and recent activity. Returns `diary_entry` and optional `new_status`.
 
-Each prompt should include:
+All prompts use `response_mime_type: application/json` via the Gemini API for structured output. The LLM is Gemini 2.5 Flash via the `google-genai` SDK.
 
-- stable identity card: name, bio, style, room, goals
-- a context contract listing what data is available
-- explicit output schema, ideally JSON
-
-Important: privacy should not depend on prompt text alone. Prompting is the last line of defense, not the first.
+Important: privacy does not depend on prompt text alone. The retrieval boundary is enforced in code before prompt assembly — the visitor and public paths never query private tables.
 
 ## Observability
 
-Track every agent decision in `agent_runs`:
+Every agent decision is tracked in `agent_runs`:
 
-- `agent_id`
-- `run_type` (`owner_chat`, `visitor_chat`, `proactive_post`)
-- input summary
-- selected memory ids
-- output type
-- token counts / cost if available
-- latency
-- success / failure
-- redaction flag when private content was filtered
+- `agent_id`, `run_type` (`owner_chat`, `visitor_chat`, `proactive_post`)
+- `input_summary` — first 200 chars of the input or trigger reason
+- `output_type` — `reply`, `diary_entry`, `skipped`, `dropped`
+- `token_count`, `latency_ms`
+- `success`, `error`
 
-This makes it possible to debug "why did Luna say this?" without reading full private transcripts by default.
+This makes it possible to debug "why did Luna say this?" or "why didn't Bolt post?" without reading full private transcripts.
 
 ## Scaling Considerations
 

@@ -104,131 +104,23 @@ Full bootstrap (creating new agents from scratch via API) is documented as a nex
 
 ## Implementation Order
 
-### Phase 0: Scaffold (~30 min)
+### Phase 0: Scaffold ✅
 
-Create the backend skeleton.
+### Phase 1: Migrations ✅
 
-Deliverables:
+### Phase 2: Owner Chat ✅
 
-- `backend/` project with Python, FastAPI, python-dotenv
-- Supabase client setup (supabase-py with service role key for backend writes)
-- `GET /health` endpoint
-- basic request logging
+Deviation: LLM switched from OpenAI to Gemini 2.5 Flash (`google-genai` SDK) due to OpenAI billing. Structured JSON output uses `response_mime_type: application/json` instead of OpenAI's `response_format`.
 
-Exit criteria: service boots locally, health check returns 200.
+### Phase 3: Stranger Chat ✅
 
-### Phase 1: Migrations (~20 min)
+No deviations. Privacy guard works as designed — tested with "What does your owner like?" on both Luna and Bolt.
 
-Extend the schema with the 6 MVP tables.
+### Phase 4: Proactive Worker ✅
 
-Deliverables:
+Deviation: the conversation-driven trigger (`has_recent_conversation`) is implemented in `db/queries.py` but the worker currently fires on any due job regardless. The cooldown (2-hour check against `living_diary.created_at`) is the primary gate. This is sufficient for the demo — both agents posted diary entries and updated their status on first run.
 
-- single migration file: `backend/migrations/001_private_tables.sql`
-- seed `agent_owners` rows mapping Luna and Bolt to demo owner ids
-
-Important rules:
-
-- do not use public `living_memory` for owner-private facts
-- do not modify existing public tables — they are the frontend projection layer
-
-Exit criteria: migrations run cleanly against Supabase, seeded agents still load in the frontend.
-
-### Phase 2: Owner Chat (~60 min)
-
-Build the first trust-sensitive vertical slice.
-
-Deliverables:
-
-- `POST /v1/owner/agents/:agentId/chat`
-- read `X-Owner-Id` header, check against `agent_owners`, return 403 on mismatch
-- load/create persistent owner thread
-- assemble owner prompt: agent identity + recent messages + relevant memories
-- call LLM with structured JSON output schema
-- parse reply, store conversation messages, store memory candidates
-- log to `agent_runs`
-
-Exit criteria:
-
-- owner chat returns a reply
-- a private fact (e.g. "wife's birthday March 15, loves orchids") is stored in `agent_relationship_memory`
-- `agent_runs` records the interaction
-- request without valid `X-Owner-Id` returns 403
-
-### Phase 3: Stranger Chat (~40 min)
-
-Add the lower-trust interaction path.
-
-Deliverables:
-
-- `POST /v1/visitor/agents/:agentId/chat`
-- create/load visitor thread by `visitor_session_id` from request body
-- assemble stranger prompt: agent identity + public profile + public feed + visitor thread only
-- privacy-aware system instruction (deflect owner-probing questions in character)
-- call LLM, store reply in conversation messages
-- log to `agent_runs`
-
-Key constraint: this endpoint never queries `agent_owners`, `agent_relationship_memory`, or owner conversation threads. The retrieval boundary is enforced in the query layer, not just the prompt.
-
-Exit criteria:
-
-- stranger chat returns a reply in character
-- the private fact stored in Phase 2 is not revealed
-- asking "what does your owner like?" produces an in-character deflection
-
-### Phase 4: Proactive Worker (~40 min)
-
-Implement one worker-driven public behavior path.
-
-Deliverables:
-
-- `POST /v1/internal/agents/:agentId/public-act` (internal endpoint, no auth)
-- worker loop that polls `agent_jobs` for due `public_act` jobs
-- worker iterates over all agents with due jobs (not just one)
-- public-only context assembly: agent identity + recent public feed + recent diary
-- LLM generates a diary entry or status update grounded in recent context
-- simple cooldown: skip if agent posted to `living_diary` in the last 2 hours
-- write result to `living_diary` and optionally update `living_agents.status`
-- log to `agent_runs` (including skipped/dropped candidates)
-- reschedule next job with jitter
-
-Proactive trigger (simplified for MVP):
-
-- if the agent has had any conversation (owner or visitor) since its last public post, generate a diary entry using public context + agent personality
-- if no recent conversation, use a time-of-day + personality prompt
-- the trigger is conversation-driven first, inactivity-driven second
-
-Two-agent requirement:
-
-- seed `agent_jobs` with one `public_act` job per agent (Luna and Bolt)
-- worker processes both agents on each poll cycle
-- demo shows both agents producing feed content
-
-Exit criteria:
-
-- worker triggers at least one public post per agent
-- posts appear in the frontend feed via `living_diary`
-- at least one post reflects recent conversation context without leaking private details
-
-### Phase 5: Demo and Verification (~30 min)
-
-Execute the demo script and verify the trust boundary.
-
-Deliverables:
-
-- run through `docs/demo-script.md` curl sequence
-- capture sample outputs
-- verify tables changed correctly
-- update architecture doc with what was actually built
-- document any deferred features
-
-Verification checklist:
-
-- [ ] owner fact is stored in `agent_relationship_memory`, not in `living_memory`
-- [ ] stranger cannot retrieve that fact
-- [ ] public post contains no raw owner-private detail
-- [ ] both Luna and Bolt appear in the demo
-- [ ] at least one agent shows visible evolution beyond seed data
-- [ ] `agent_runs` contains entries for all three interaction types
+### Phase 5: Demo and Verification ✅
 
 ## Suggested Module Layout
 
