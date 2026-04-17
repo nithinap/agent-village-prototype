@@ -1,8 +1,10 @@
 """Internal endpoint for proactive agent behavior."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
+
+from app.agents.orchestrator import handle_public_act
 
 router = APIRouter(prefix="/v1/internal")
 
@@ -15,5 +17,5 @@ class PublicActResponse(BaseModel):
 
 @router.post("/agents/{agent_id}/public-act", response_model=PublicActResponse)
 async def public_act(agent_id: str):
-    # TODO Phase 4: implement proactive public behavior
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    result = await handle_public_act(agent_id)
+    return PublicActResponse(**result)

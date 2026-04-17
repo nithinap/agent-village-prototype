@@ -144,6 +144,51 @@ async def handle_visitor_chat(agent_id: str, session_id: str, message: str) -> d
 
 
 async def handle_public_act(agent_id: str) -> dict:
-    """Proactive public behavior: generate diary/status from public context."""
-    # TODO Phase 4
-    raise NotImplementedError
+    """Proactive public behavior: generate diary/status from public context only."""
+    t0 = time.time()
+
+    agent = queries.get_agent(agent_id)
+    if not agent:
+        raise ValueError(f"Agent {agent_id} not found")
+
+    # Cooldown: skip if agent posted in the last 2 hours
+    recent_diary = queries.get_recent_diary(agent_id, limit=1)
+    if recent_diary:
+        from datetime import datetime, timezone, timedelta
+        last = datetime.fromisoformat(recent_diary[0]["created_at"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) - last < timedelta(hours=2):
+            await log_run(agent_id, "proactive_post",
+                          input_summary="skipped: cooldown", output_type="skipped", success=True)
+            return {"action_taken": False, "action_type": "skipped_cooldown"}
+
+    # Public-only context
+    diary = queries.get_recent_diary(agent_id)
+    activity = queries.get_recent_activity(agent_id)
+
+    prompt = build_public_post_prompt(agent, diary, activity)
+    prompt.append({"role": "user", "content": "Write a new diary entry or status update."})
+    raw, tokens = _call_llm(prompt)
+    parsed = _parse_json(raw)
+
+    diary_text = parsed.get("diary_entry", "").strip()
+    new_status = parsed.get("new_status")
+
+    if not diary_text:
+        await log_run(agent_id, "proactive_post",
+                      input_summary="dropped: empty output", output_type="dropped", success=True)
+        return {"action_taken": False, "action_type": "dropped_empty"}
+
+    record = queries.insert_diary(agent_id, diary_text)
+    if new_status and isinstance(new_status, str) and new_status.strip():
+        queries.update_agent_status(agent_id, new_status.strip())
+
+    latency = int((time.time() - t0) * 1000)
+    await log_run(agent_id, "proactive_post",
+                  input_summary=diary_text[:200], output_type="diary_entry",
+                  token_count=tokens, latency_ms=latency)
+
+    return {
+        "action_taken": True,
+        "action_type": "diary_entry",
+        "published_record_id": record["id"],
+    }
