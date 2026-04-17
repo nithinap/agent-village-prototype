@@ -3,7 +3,7 @@
 import uuid
 import time
 from typing import Optional
-from app.db.client import supabase
+from app.db.client import get_supabase
 
 
 async def log_run(
@@ -18,7 +18,7 @@ async def log_run(
     error: Optional[str] = None,
 ) -> str:
     run_id = str(uuid.uuid4())
-    supabase.table("agent_runs").insert({
+    get_supabase().table("agent_runs").insert({
         "id": run_id,
         "agent_id": agent_id,
         "run_type": run_type,
