@@ -4,7 +4,7 @@ import json
 import os
 import time
 import logging
-from openai import OpenAI
+from google import genai
 
 from app.db import queries
 from app.agents.prompts import build_owner_prompt, build_visitor_prompt, build_public_post_prompt
@@ -12,20 +12,46 @@ from app.observability.runs import log_run
 
 log = logging.getLogger(__name__)
 
-_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+_client: genai.Client | None = None
+
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    return _client
 
 
 def _call_llm(messages: list[dict]) -> tuple[str, int]:
-    """Call OpenAI and return (content, total_tokens)."""
-    resp = _client.chat.completions.create(
-        model=_model,
-        messages=messages,
-        temperature=0.7,
-        response_format={"type": "json_object"},
+    """Call Gemini and return (content, total_tokens)."""
+    model = os.environ.get("LLM_MODEL", "gemini-2.0-flash")
+    # Convert OpenAI-style messages to Gemini contents
+    system_instruction = None
+    contents = []
+    for m in messages:
+        if m["role"] == "system":
+            system_instruction = m["content"]
+        elif m["role"] == "user":
+            contents.append({"role": "user", "parts": [{"text": m["content"]}]})
+        elif m["role"] == "assistant":
+            contents.append({"role": "model", "parts": [{"text": m["content"]}]})
+
+    config = {
+        "temperature": 0.7,
+        "response_mime_type": "application/json",
+    }
+    if system_instruction:
+        config["system_instruction"] = system_instruction
+
+    resp = _get_client().models.generate_content(
+        model=model,
+        contents=contents,
+        config=config,
     )
-    content = resp.choices[0].message.content
-    tokens = resp.usage.total_tokens if resp.usage else 0
+    content = resp.text or ""
+    tokens = 0
+    if resp.usage_metadata:
+        tokens = (resp.usage_metadata.prompt_token_count or 0) + (resp.usage_metadata.candidates_token_count or 0)
     return content, tokens
 
 

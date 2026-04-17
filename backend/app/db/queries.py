@@ -8,16 +8,16 @@ from app.db.client import get_supabase
 
 def get_agent(agent_id: str) -> Optional[dict]:
     db = get_supabase()
-    r = db.table("living_agents").select("*").eq("id", agent_id).maybe_single().execute()
-    return r.data
+    r = db.table("living_agents").select("*").eq("id", agent_id).limit(1).execute()
+    return r.data[0] if r.data else None
 
 
 # ── Owner auth ──
 
 def get_owner_id(agent_id: str) -> Optional[str]:
     db = get_supabase()
-    r = db.table("agent_owners").select("owner_id").eq("agent_id", agent_id).maybe_single().execute()
-    return r.data["owner_id"] if r.data else None
+    r = db.table("agent_owners").select("owner_id").eq("agent_id", agent_id).limit(1).execute()
+    return r.data[0]["owner_id"] if r.data else None
 
 
 # ── Threads ──
@@ -30,10 +30,10 @@ def get_or_create_thread(agent_id: str, actor_type: str, actor_id: str) -> dict:
          .eq("actor_type", actor_type)
          .eq("actor_id", actor_id)
          .eq("status", "active")
-         .maybe_single()
+         .limit(1)
          .execute())
     if r.data:
-        return r.data
+        return r.data[0]
     r = (db.table("conversation_threads")
          .insert({"agent_id": agent_id, "actor_type": actor_type, "actor_id": actor_id})
          .execute())
