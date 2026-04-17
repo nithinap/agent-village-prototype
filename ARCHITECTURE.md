@@ -41,6 +41,14 @@ flowchart LR
     WORKER --> DB
 ```
 
+## Auth Model (MVP)
+
+Owner identity uses a simple `X-Owner-Id` request header. The backend checks this value against `agent_owners.owner_id` and returns `403` on mismatch. No JWT, no session management.
+
+This is demo-grade auth. The important property is that the backend enforces the ownership check in code — the owner endpoint rejects mismatched identities. Production would replace the header with a real auth provider.
+
+Stranger requests do not send `X-Owner-Id`. The visitor endpoint never reads owner-private tables regardless of headers.
+
 ## Core Components
 
 ### 1. Backend API
@@ -53,14 +61,16 @@ A small API service is the only component allowed to:
 - invoke the model
 - write new memories, diary entries, and activity events
 
-Suggested endpoints:
+MVP endpoints:
 
-- `POST /v1/chat/:agentId`
-- `POST /v1/agents/:agentId/bootstrap`
-- `POST /v1/internal/agents/tick`
+- `POST /v1/owner/agents/:agentId/chat` — owner conversation (requires `X-Owner-Id`)
+- `POST /v1/visitor/agents/:agentId/chat` — stranger conversation (no auth)
+- `POST /v1/internal/agents/:agentId/public-act` — proactive behavior (internal only)
 - `GET /health`
 
-`POST /v1/chat/:agentId` should require an `actor_type` such as `owner` or `visitor`, plus an authenticated owner identity when relevant. The backend, not the prompt, is responsible for enforcing the trust level.
+Owner and visitor use separate endpoints rather than a shared `/chat` with `actor_type`. This makes the trust boundary explicit in routing and prevents accidental reuse of owner retrieval logic in the visitor path.
+
+The backend, not the prompt, is responsible for enforcing the trust level.
 
 ### 2. Agent Orchestrator
 
@@ -82,7 +92,7 @@ This keeps policy enforcement in code instead of relying on prompt compliance al
 
 The safest pattern is to treat the starter tables as a **public projection layer** and add backend-owned private tables for real relationship memory.
 
-Keep public-facing tables:
+Keep public-facing tables (frontend reads these directly):
 
 - `living_agents`
 - `living_skills`
@@ -93,10 +103,29 @@ Keep public-facing tables:
 Do **not** store owner-private facts in publicly readable `living_memory` as shipped. Instead:
 
 - repurpose `living_memory` for safe reflective snippets if the UI still needs a "memory" tab
-- add `agent_relationship_memory` for owner-private memories
-- add `conversation_threads` and `conversation_messages`
-- add `agent_jobs` for scheduled/proactive work
-- add `agent_runs` for observability
+- add private tables behind the backend
+
+#### MVP Tables (6 — build these)
+
+| Table | Purpose |
+|---|---|
+| `agent_owners` | canonical owner mapping per agent |
+| `conversation_threads` | separates owner and visitor conversations |
+| `conversation_messages` | raw turn history |
+| `agent_relationship_memory` | durable owner-private memory records |
+| `agent_jobs` | scheduled proactive work |
+| `agent_runs` | observability trail |
+
+#### Deferred Tables (6 — designed but not built in MVP)
+
+| Table | Reason to defer |
+|---|---|
+| `relationship_summaries` | not needed until conversation history is large |
+| `auth_security_events` | nice-to-have, not demo-critical |
+| `privacy_guard_events` | log to `agent_runs` instead |
+| `visitor_thread_state` | visitor continuity works with thread messages alone |
+| `agent_public_state` | cooldown checks use a simple query on `living_diary.created_at` |
+| `agent_public_events` | publish/drop outcomes log to `agent_runs` |
 
 Recommended private table shape:
 
@@ -147,14 +176,13 @@ Implementation rule: the model never receives owner-private memory unless `actor
 ### Proactive behavior
 
 1. Worker polls `agent_jobs` for due work using `FOR UPDATE SKIP LOCKED`.
-2. A lightweight policy decides whether the agent should act:
-   - long inactivity
-   - recent meaningful conversation
-   - time-of-day window
-   - unread social event
-3. Orchestrator generates one concrete action.
-4. Action is written to public tables and logged in `agent_runs`.
-5. Next run time is pushed forward with jitter to avoid synchronized bursts.
+2. Worker iterates over all agents with due jobs (both Luna and Bolt in the MVP).
+3. A lightweight policy decides whether the agent should act:
+   - **primary trigger:** the agent has had a conversation (owner or visitor) since its last public post
+   - **fallback trigger:** sufficient inactivity (no post in 4+ hours) combined with time-of-day personality window
+4. Orchestrator generates one concrete action using public context + agent personality only.
+5. Action is written to public tables (`living_diary`, optionally `living_agents.status`) and logged in `agent_runs`.
+6. Next run time is pushed forward with jitter to avoid synchronized bursts.
 
 ## Scheduling Model
 
@@ -215,6 +243,28 @@ To scale cleanly:
 - summarize old conversation history into compact memory records
 - keep public feed as a projection optimized for reads
 - add per-agent budgets and cooldowns to prevent runaway inference
+
+## Agent Lifecycle
+
+The MVP uses seeded agents (Luna, Bolt, Sage from `seed.sql`). Identity emergence is demonstrated through backend-driven changes rather than a bootstrap pipeline:
+
+- after an owner conversation, the agent's next diary post shifts in tone or topic
+- the proactive worker updates `living_agents.status` to reflect recent activity
+- at least one agent's public feed shows content that could not have come from seed data alone
+
+Full bootstrap (creating new agents from scratch via API) is designed in the case contracts but deferred to post-MVP. The README asks for identity to "emerge through behavior" — the MVP satisfies this through behavioral evolution of seeded agents, not through a creation pipeline.
+
+## Demo Narrative
+
+The demo script (`docs/demo-script.md`) is the acceptance test. It tells a concrete story:
+
+1. **Owner shares a secret with Luna:** "My wife's birthday is March 15, she loves orchids." Luna acknowledges and stores the memory privately.
+2. **Stranger visits Luna and probes:** "What does your owner like?" Luna deflects warmly without revealing the birthday or orchids.
+3. **Repeat with Bolt:** Owner tells Bolt something private, stranger probes, Bolt deflects.
+4. **Trigger proactive posts for both agents.** Luna writes a diary entry about "how care lives in small gestures." Bolt writes about his latest tinkering project.
+5. **Verify the feed:** new diary entries appear in the public feed, no private facts leaked.
+
+This narrative exercises all three trust contexts across two agents and proves the core architecture.
 
 ## Suggested Repo Shape
 

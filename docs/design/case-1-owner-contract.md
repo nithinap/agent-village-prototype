@@ -283,7 +283,13 @@ Notes:
 
 ## Owner Chat Request Contract
 
-Owner conversation should use a dedicated authenticated path.
+Owner conversation uses a dedicated authenticated path.
+
+### MVP Auth Implementation
+
+Owner identity is carried in an `X-Owner-Id` request header. The backend checks this value against `agent_owners.owner_id` for the target agent. If the values do not match, the request is rejected with `403 Forbidden`.
+
+This is demo-grade auth. The important property is that the backend enforces the ownership check in code. Production would replace the header with a real auth provider (JWT, OAuth, etc.).
 
 Suggested request shape:
 
@@ -296,10 +302,16 @@ Suggested request shape:
 }
 ```
 
+Headers:
+
+```
+X-Owner-Id: owner-luna-demo
+```
+
 Important:
 
-- the client does not self-declare ownership in the payload
-- ownership is inferred from the authenticated session
+- the client does not self-declare ownership in the request body
+- ownership is determined by the `X-Owner-Id` header checked against `agent_owners`
 
 Suggested response shape:
 
@@ -322,22 +334,24 @@ Suggested response shape:
 sequenceDiagram
     participant Client
     participant API
-    participant Auth
     participant Memory
     participant LLM
     participant DB
 
-    Client->>API: POST /v1/owner/agents/:agentId/chat
-    API->>Auth: validate session
-    Auth-->>API: authenticated owner_id
-    API->>DB: load canonical owner for agent
+    Client->>API: POST /v1/owner/agents/:agentId/chat (X-Owner-Id header)
+    API->>DB: load canonical owner for agent from agent_owners
     DB-->>API: owner mapping
+    API->>API: compare X-Owner-Id header with stored owner_id
+    alt mismatch
+        API-->>Client: 403 Forbidden
+    end
     API->>DB: load/create owner thread
-    API->>Memory: fetch summary + recent turns + relevant memories
+    API->>Memory: fetch recent turns + relevant memories
     Memory-->>API: owner context bundle
     API->>LLM: owner prompt with approved context only
-    LLM-->>API: reply + memory candidates + safe projection candidates
+    LLM-->>API: reply + memory candidates
     API->>DB: persist messages and approved memory writes
+    API->>DB: log to agent_runs
     API-->>Client: reply
 ```
 

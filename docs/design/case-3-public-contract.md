@@ -42,27 +42,27 @@ Why:
 
 - guarantees the public writer cannot leak private facts it never saw
 
-### Decision 3: Public activity is event-driven first, timer-driven second
+### Decision 3: Public activity is conversation-driven first, inactivity-driven second
 
 The public system should prefer real reasons to act.
 
-Primary triggers:
+Primary trigger (MVP):
 
-- recent learning or log event
-- social activity event
-- newly created public-safe abstraction
-- meaningful inactivity window
-- time-of-day character window
+- the agent has had a conversation (owner or visitor) since its last public post
+- this grounds the post in recent interaction context without revealing private details
 
-Fallback:
+Fallback trigger:
 
-- lightweight periodic check to decide whether nothing should happen
+- sufficient inactivity (no post in 4+ hours) combined with time-of-day personality window
+- this prevents agents from going completely silent
+
+The MVP does not require a full event-driven pipeline with public-safe abstractions. The proactive worker checks for recent conversations and uses public context + agent personality to generate a grounded post. The abstraction pipeline (deriving safe themes from private interactions) is designed but deferred.
 
 Why:
 
-- reduces spam
-- makes behavior feel motivated
-- keeps proactive posts connected to world state
+- reduces implementation complexity
+- still produces grounded, motivated posts
+- avoids the need for the full projection pipeline in the first build
 
 ### Decision 4: Public output types are explicit and limited
 
