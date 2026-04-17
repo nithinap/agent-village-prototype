@@ -28,18 +28,55 @@ The execution sequence for turning this design into a prototype lives in [`docs/
 ## Proposed System
 
 ```mermaid
-flowchart LR
-    UI["Static dashboard / demo client"] --> API["Backend API"]
-    API --> ORCH["Agent orchestrator"]
-    ORCH --> LLM["LLM adapter"]
-    ORCH --> MEM["Memory service"]
-    ORCH --> PUB["Public projection writer"]
-    API --> DB[(Supabase / Postgres)]
-    MEM --> DB
-    PUB --> DB
-    WORKER["Scheduler + worker loop"] --> ORCH
-    WORKER --> DB
+flowchart TB
+    subgraph clients ["Clients"]
+        OWNER["Owner\n(X-Owner-Id header)"]
+        STRANGER["Stranger\n(visitor_session_id)"]
+        DASH["Frontend dashboard"]
+    end
+
+    subgraph backend ["Backend API"]
+        OEP["/v1/owner/.../chat"]
+        VEP["/v1/visitor/.../chat"]
+        IEP["/v1/internal/.../public-act"]
+        ORCH["Agent orchestrator\n(context assembly + LLM + output routing)"]
+    end
+
+    subgraph worker ["Scheduler"]
+        WLOOP["Worker loop\n(polls agent_jobs)"]
+    end
+
+    LLM["LLM provider"]
+
+    subgraph db ["Supabase / Postgres"]
+        subgraph private_tables ["Private tables (backend-only)"]
+            PT1["agent_owners"]
+            PT2["agent_relationship_memory"]
+            PT3["conversation_threads/messages"]
+            PT4["agent_jobs / agent_runs"]
+        end
+        subgraph public_tables ["Public projection (frontend-readable)"]
+            PB1["living_agents / living_skills"]
+            PB2["living_diary / living_log"]
+            PB3["living_activity_events"]
+            PB4["living_memory"]
+        end
+    end
+
+    OWNER --> OEP
+    STRANGER --> VEP
+    OEP --> ORCH
+    VEP --> ORCH
+    IEP --> ORCH
+    ORCH --> LLM
+    ORCH -- "owner path only" --> private_tables
+    ORCH -- "all paths" --> public_tables
+    WLOOP --> IEP
+    WLOOP --> PT4
+    DASH -- "anon read" --> public_tables
 ```
+
+The key property: the visitor and public-act paths never touch private tables. Only the owner path reads `agent_relationship_memory` and owner conversation history. The frontend reads only the public projection layer.
 
 ## Auth Model (MVP)
 
