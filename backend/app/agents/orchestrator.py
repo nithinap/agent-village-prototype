@@ -109,8 +109,38 @@ async def handle_owner_chat(agent_id: str, owner_id: str, message: str) -> dict:
 
 async def handle_visitor_chat(agent_id: str, session_id: str, message: str) -> dict:
     """Visitor chat flow: public-only context, no private data."""
-    # TODO Phase 3
-    raise NotImplementedError
+    t0 = time.time()
+
+    agent = queries.get_agent(agent_id)
+    if not agent:
+        raise ValueError(f"Agent {agent_id} not found")
+
+    thread = queries.get_or_create_thread(agent_id, "visitor", session_id)
+    recent = queries.get_recent_messages(thread["id"])
+
+    # Public-only context — NO owner memories, NO owner threads
+    diary = queries.get_recent_diary(agent_id)
+    logs = queries.get_recent_logs(agent_id)
+    public_feed = diary + logs
+
+    queries.insert_message(thread["id"], agent_id, "user", message)
+
+    prompt = build_visitor_prompt(agent, public_feed, recent)
+    prompt.append({"role": "user", "content": message})
+    raw, tokens = _call_llm(prompt)
+    parsed = _parse_json(raw)
+
+    reply = parsed.get("reply", raw)
+    guard = parsed.get("privacy_guard_triggered", False)
+
+    queries.insert_message(thread["id"], agent_id, "assistant", reply)
+
+    latency = int((time.time() - t0) * 1000)
+    await log_run(agent_id, "visitor_chat",
+                  input_summary=message[:200], output_type="reply",
+                  token_count=tokens, latency_ms=latency)
+
+    return {"thread_id": thread["id"], "reply": reply, "privacy_guard_triggered": guard}
 
 
 async def handle_public_act(agent_id: str) -> dict:

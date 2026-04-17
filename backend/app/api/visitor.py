@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
+from app.agents.orchestrator import handle_visitor_chat
+
 router = APIRouter(prefix="/v1/visitor")
 
 
@@ -24,5 +26,5 @@ async def visitor_chat(
     agent_id: str,
     body: VisitorChatRequest,
 ):
-    # TODO Phase 3: implement visitor chat flow
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    result = await handle_visitor_chat(agent_id, body.visitor_session_id, body.message)
+    return VisitorChatResponse(**result)
