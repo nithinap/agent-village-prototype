@@ -194,9 +194,13 @@ async def handle_public_act(agent_id: str) -> dict:
     }
 
 
-async def handle_bootstrap(name: str, owner_id: str) -> dict:
+async def handle_bootstrap(name: str, owner_id: str, hint: str | None = None) -> dict:
     """Generate agent identity via LLM, insert into living_agents + agent_owners."""
     t0 = time.time()
+
+    user_msg = f"Create an agent named {name}."
+    if hint:
+        user_msg += f" Personality hint: {hint}"
 
     prompt = [
         {"role": "system", "content": (
@@ -209,7 +213,7 @@ async def handle_bootstrap(name: str, owner_id: str) -> dict:
             '"accent_color": "hex color that fits the personality", '
             '"showcase_emoji": "one emoji that represents them"}'
         )},
-        {"role": "user", "content": f"Create an agent named {name}."},
+        {"role": "user", "content": user_msg},
     ]
     raw, tokens = _call_llm(prompt)
     parsed = _parse_json(raw)
