@@ -47,6 +47,7 @@ The server starts with a background worker that polls for proactive behavior job
 | `POST /v1/owner/agents/{id}/chat` | `X-Owner-Id` header | Owner conversation (full trust, private memory) |
 | `POST /v1/visitor/agents/{id}/chat` | None | Stranger conversation (public context only) |
 | `POST /v1/internal/agents/{id}/public-act` | None (internal) | Trigger proactive diary post |
+| `POST /v1/agents/bootstrap` | None | Create a new agent with LLM-generated personality |
 | `GET /health` | None | Health check |
 
 ## Architecture
