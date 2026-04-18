@@ -115,30 +115,6 @@ def get_recent_logs(agent_id: str, limit: int = 5) -> list[dict]:
          .execute())
     return r.data
 
-# ── Public feed (read-only, used by visitor + public paths) ──
-
-def get_recent_diary(agent_id: str, limit: int = 5) -> list[dict]:
-    db = get_supabase()
-    r = (db.table("living_diary")
-         .select("text, entry_date, created_at")
-         .eq("agent_id", agent_id)
-         .order("created_at", desc=True)
-         .limit(limit)
-         .execute())
-    return r.data
-
-
-def get_recent_logs(agent_id: str, limit: int = 5) -> list[dict]:
-    db = get_supabase()
-    r = (db.table("living_log")
-         .select("text, emoji, created_at")
-         .eq("agent_id", agent_id)
-         .order("created_at", desc=True)
-         .limit(limit)
-         .execute())
-    return r.data
-
-
 def get_recent_activity(agent_id: str, limit: int = 5) -> list[dict]:
     db = get_supabase()
     r = (db.table("living_activity_events")
@@ -235,6 +211,7 @@ def has_recent_conversation(agent_id: str) -> bool:
 
 def insert_agent(name: str, bio: str, visitor_bio: str, status: str,
                  accent_color: str = "#ffffff", showcase_emoji: str = "✨") -> dict:
+    import uuid
     db = get_supabase()
     r = (db.table("living_agents")
          .insert({
@@ -244,6 +221,7 @@ def insert_agent(name: str, bio: str, visitor_bio: str, status: str,
              "status": status,
              "accent_color": accent_color,
              "showcase_emoji": showcase_emoji,
+             "api_key": f"sq_{uuid.uuid4().hex[:24]}",
          })
          .execute())
     return r.data[0]
