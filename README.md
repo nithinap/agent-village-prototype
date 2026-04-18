@@ -252,19 +252,3 @@ Use whatever tools you want. We do too.
 5. Start building
 
 ---
-
-## Questions
-
-Ask rather than guess.
-
-Contact: louis@pika.art, chenlin@pika.art
-
----
-
-## Timeline
-
-Expected turnaround: **3–5 days**
-
-Estimated implementation time: **≤5 hours**
-
-If you need more time, just let us know.
