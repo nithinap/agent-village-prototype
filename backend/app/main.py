@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, owner, visitor, internal
+from app.api import health, owner, visitor, internal, bootstrap
 from app.scheduler.worker import run_worker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -31,3 +31,4 @@ app.include_router(health.router)
 app.include_router(owner.router)
 app.include_router(visitor.router)
 app.include_router(internal.router)
+app.include_router(bootstrap.router)

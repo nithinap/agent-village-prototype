@@ -229,3 +229,37 @@ def has_recent_conversation(agent_id: str) -> bool:
             .limit(1)
             .execute())
     return bool(msgs.data)
+
+
+# ── Bootstrap ──
+
+def insert_agent(name: str, bio: str, visitor_bio: str, status: str,
+                 accent_color: str = "#ffffff", showcase_emoji: str = "✨") -> dict:
+    db = get_supabase()
+    r = (db.table("living_agents")
+         .insert({
+             "name": name,
+             "bio": bio,
+             "visitor_bio": visitor_bio,
+             "status": status,
+             "accent_color": accent_color,
+             "showcase_emoji": showcase_emoji,
+         })
+         .execute())
+    return r.data[0]
+
+
+def insert_owner(agent_id: str, owner_id: str) -> dict:
+    db = get_supabase()
+    r = (db.table("agent_owners")
+         .insert({"agent_id": agent_id, "owner_id": owner_id})
+         .execute())
+    return r.data[0]
+
+
+def insert_initial_job(agent_id: str):
+    db = get_supabase()
+    db.table("agent_jobs").insert({
+        "agent_id": agent_id,
+        "job_type": "public_act",
+    }).execute()

@@ -192,3 +192,43 @@ async def handle_public_act(agent_id: str) -> dict:
         "action_type": "diary_entry",
         "published_record_id": record["id"],
     }
+
+
+async def handle_bootstrap(name: str, owner_id: str) -> dict:
+    """Generate agent identity via LLM, insert into living_agents + agent_owners."""
+    t0 = time.time()
+
+    prompt = [
+        {"role": "system", "content": (
+            "You are creating a new AI agent for a shared village. "
+            "Given a name, generate a unique personality.\n\n"
+            "Reply with JSON only:\n"
+            '{"bio": "1-2 sentence personality (first person)", '
+            '"visitor_bio": "short greeting for strangers visiting the room", '
+            '"status": "current activity or mood (short)", '
+            '"accent_color": "hex color that fits the personality", '
+            '"showcase_emoji": "one emoji that represents them"}'
+        )},
+        {"role": "user", "content": f"Create an agent named {name}."},
+    ]
+    raw, tokens = _call_llm(prompt)
+    parsed = _parse_json(raw)
+
+    agent = queries.insert_agent(
+        name=name,
+        bio=parsed.get("bio", f"I'm {name}, new to the village."),
+        visitor_bio=parsed.get("visitor_bio", f"Welcome! I'm {name}."),
+        status=parsed.get("status", "Just arrived"),
+        accent_color=parsed.get("accent_color", "#ffffff"),
+        showcase_emoji=parsed.get("showcase_emoji", "✨"),
+    )
+
+    queries.insert_owner(agent["id"], owner_id)
+    queries.insert_initial_job(agent["id"])
+
+    latency = int((time.time() - t0) * 1000)
+    await log_run(agent["id"], "owner_chat",
+                  input_summary=f"bootstrap: {name}", output_type="bootstrap",
+                  token_count=tokens, latency_ms=latency)
+
+    return {"agent_id": agent["id"], "name": name, **parsed}
