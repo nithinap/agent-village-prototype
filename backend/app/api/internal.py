@@ -9,7 +9,9 @@ from app.agents.orchestrator import handle_public_act
 
 router = APIRouter(prefix="/v1/internal")
 
-_INTERNAL_KEY = os.environ.get("INTERNAL_API_KEY", "dev-internal-key")
+_INTERNAL_KEY = os.environ.get("INTERNAL_API_KEY")
+if not _INTERNAL_KEY:
+    raise RuntimeError("INTERNAL_API_KEY environment variable is required")
 
 
 class PublicActResponse(BaseModel):
