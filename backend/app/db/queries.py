@@ -194,7 +194,6 @@ def reschedule_job(agent_id: str, job_type: str = "public_act", delay_minutes: i
 def has_recent_conversation(agent_id: str) -> bool:
     """Check if agent had any conversation since its last diary post."""
     db = get_supabase()
-    # Get last diary post time
     diary = (db.table("living_diary")
              .select("created_at")
              .eq("agent_id", agent_id)
@@ -203,7 +202,6 @@ def has_recent_conversation(agent_id: str) -> bool:
              .execute())
     last_post = diary.data[0]["created_at"] if diary.data else "2000-01-01T00:00:00Z"
 
-    # Check for any messages since then
     msgs = (db.table("conversation_messages")
             .select("id")
             .eq("agent_id", agent_id)
@@ -211,6 +209,42 @@ def has_recent_conversation(agent_id: str) -> bool:
             .limit(1)
             .execute())
     return bool(msgs.data)
+
+
+def has_recent_social_event(agent_id: str) -> bool:
+    """Check if another agent interacted with this one since its last diary post."""
+    db = get_supabase()
+    diary = (db.table("living_diary")
+             .select("created_at")
+             .eq("agent_id", agent_id)
+             .order("created_at", desc=True)
+             .limit(1)
+             .execute())
+    last_post = diary.data[0]["created_at"] if diary.data else "2000-01-01T00:00:00Z"
+
+    events = (db.table("living_activity_events")
+              .select("id")
+              .eq("recipient_id", str(agent_id))
+              .gt("created_at", last_post)
+              .limit(1)
+              .execute())
+    return bool(events.data)
+
+
+def hours_since_last_post(agent_id: str) -> float:
+    """Hours since the agent's last diary entry. Returns inf if no posts exist."""
+    from datetime import datetime, timezone
+    db = get_supabase()
+    diary = (db.table("living_diary")
+             .select("created_at")
+             .eq("agent_id", agent_id)
+             .order("created_at", desc=True)
+             .limit(1)
+             .execute())
+    if not diary.data:
+        return float("inf")
+    last = datetime.fromisoformat(diary.data[0]["created_at"].replace("Z", "+00:00"))
+    return (datetime.now(timezone.utc) - last).total_seconds() / 3600
 
 
 # ── Bootstrap ──

@@ -161,6 +161,18 @@ async def handle_public_act(agent_id: str) -> dict:
                           input_summary="skipped: cooldown", output_type="skipped", success=True)
             return {"action_taken": False, "action_type": "skipped_cooldown"}
 
+    # Event-driven trigger: only post if something meaningful happened,
+    # or if the agent has been silent for 24+ hours (liveness fallback)
+    has_trigger = (
+        queries.has_recent_conversation(agent_id)
+        or queries.has_recent_social_event(agent_id)
+        or queries.hours_since_last_post(agent_id) >= 24
+    )
+    if not has_trigger:
+        await log_run(agent_id, "proactive_post",
+                      input_summary="skipped: no trigger", output_type="skipped", success=True)
+        return {"action_taken": False, "action_type": "skipped_no_trigger"}
+
     # Public-only context
     diary = queries.get_recent_diary(agent_id)
     activity = queries.get_recent_activity(agent_id)
