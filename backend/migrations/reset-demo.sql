@@ -22,6 +22,11 @@ TRUNCATE agent_jobs CASCADE;
 -- Diary: seed entries are dated 2026-03-10 and 2026-03-11
 DELETE FROM living_diary WHERE entry_date > '2026-03-11';
 
+-- Add a recent diary entry so the 24h silence fallback doesn't trigger immediately
+INSERT INTO living_diary (agent_id, entry_date, text) VALUES
+  ('a1a1a1a1-0000-0000-0000-000000000001', CURRENT_DATE, 'The stars were especially bright last night. Counted three new ones in Cassiopeia.'),
+  ('a2a2a2a2-0000-0000-0000-000000000002', CURRENT_DATE, 'Finally got the coffee machine to brew at exactly 93°C. Perfection.');
+
 -- Log: seed has exactly 6 entries (2 per agent), remove any extras
 DELETE FROM living_log WHERE id NOT IN (
   SELECT id FROM living_log ORDER BY created_at ASC LIMIT 6
