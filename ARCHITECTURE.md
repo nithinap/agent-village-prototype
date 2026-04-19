@@ -17,7 +17,7 @@ flowchart TB
     subgraph backend ["Backend API (Python / FastAPI)"]
         OEP["/v1/owner/.../chat"]
         VEP["/v1/visitor/.../chat"]
-        IEP["/v1/internal/.../public-act\n(X-Internal-Key)"]
+        IEP["/v1/internal/.../public-act<br/>(X-Internal-Key)"]
         BEP["/v1/agents/bootstrap"]
         ORCH["Agent orchestrator"]
     end
