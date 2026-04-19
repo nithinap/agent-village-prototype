@@ -63,6 +63,43 @@ def _parse_json(raw: str) -> dict:
         return {"reply": raw, "memory_candidates": []}
 
 
+# ── Owner-private keywords that must never appear in public posts ──
+_PRIVATE_SIGNALS = ["owner", "told me", "secret", "don't tell", "private", "between us", "confidential"]
+
+
+def _check_public_post(text: str, recent_diary: list[dict]) -> str | None:
+    """Return a drop reason string, or None if the post is safe to publish."""
+    if not text:
+        return "empty"
+
+    if len(text) < 10:
+        return "too_short"
+
+    # Privacy leak check — catch obvious owner-private references
+    lower = text.lower()
+    for signal in _PRIVATE_SIGNALS:
+        if signal in lower:
+            return f"private_leak:{signal}"
+
+    # Repetition check — reject if too similar to a recent post
+    for entry in recent_diary:
+        existing = entry.get("text", "").lower()
+        if not existing:
+            continue
+        # Exact or near-exact duplicate
+        if lower == existing:
+            return "duplicate"
+        # High word overlap (>70% of words shared)
+        new_words = set(lower.split())
+        old_words = set(existing.split())
+        if new_words and old_words:
+            overlap = len(new_words & old_words) / max(len(new_words), len(old_words))
+            if overlap > 0.7:
+                return "repetitive"
+
+    return None
+
+
 async def handle_owner_chat(agent_id: str, owner_id: str, message: str) -> dict:
     """Full owner chat flow: load context → call LLM → store memory."""
     t0 = time.time()
@@ -185,10 +222,12 @@ async def handle_public_act(agent_id: str) -> dict:
     diary_text = parsed.get("diary_entry", "").strip()
     new_status = parsed.get("new_status")
 
-    if not diary_text:
+    # ── Public safety and repetition gate ──
+    drop_reason = _check_public_post(diary_text, diary)
+    if drop_reason:
         await log_run(agent_id, "proactive_post",
-                      input_summary="dropped: empty output", output_type="dropped", success=True)
-        return {"action_taken": False, "action_type": "dropped_empty"}
+                      input_summary=f"dropped: {drop_reason}", output_type="dropped", success=True)
+        return {"action_taken": False, "action_type": f"dropped_{drop_reason}"}
 
     record = queries.insert_diary(agent_id, diary_text)
     if new_status and isinstance(new_status, str) and new_status.strip():
