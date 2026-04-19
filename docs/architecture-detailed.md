@@ -30,8 +30,8 @@ The execution sequence for turning this design into a prototype lives in [`docs/
 ```mermaid
 flowchart TB
     subgraph clients ["Clients"]
-        OWNER["Owner\n(X-Owner-Id header)"]
-        STRANGER["Stranger\n(visitor_session_id)"]
+        OWNER["Owner<br/>(X-Owner-Id header)"]
+        STRANGER["Stranger<br/>(visitor_session_id)"]
         DASH["Frontend dashboard"]
     end
 
@@ -39,14 +39,14 @@ flowchart TB
         OEP["/v1/owner/.../chat"]
         VEP["/v1/visitor/.../chat"]
         IEP["/v1/internal/.../public-act"]
-        ORCH["Agent orchestrator\n(context assembly + LLM + output routing)"]
+        ORCH["Agent orchestrator<br/>(context assembly + LLM + output routing)"]
     end
 
     subgraph worker ["Scheduler"]
-        WLOOP["Worker loop\n(polls agent_jobs every 30s)"]
+        WLOOP["Worker loop<br/>(polls agent_jobs every 30s)"]
     end
 
-    LLM["Gemini 2.5 Flash\n(google-genai SDK)"]
+    LLM["Gemini 2.5 Flash<br/>(google-genai SDK)"]
 
     subgraph db ["Supabase / Postgres"]
         subgraph private_tables ["Private tables (backend-only)"]
