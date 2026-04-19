@@ -16,6 +16,6 @@ TRUNCATE living_agents CASCADE;
 TRUNCATE announcements CASCADE;
 TRUNCATE living_activity_events CASCADE;
 
--- After running this, re-run in order:
---   1. seed.sql
---   2. backend/migrations/001_private_tables.sql (for owner mappings + initial jobs)
+-- After running this, re-run IN THIS ORDER:
+--   1. seed.sql                                  (agents must exist first)
+--   2. backend/migrations/001_private_tables.sql  (references agents by FK)
