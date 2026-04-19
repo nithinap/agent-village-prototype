@@ -23,6 +23,24 @@ It translates this brief into:
 
 A concrete build sequence based on that design now lives in [docs/implementation-plan.md](./docs/implementation-plan.md).
 
+## Quick Start
+
+```bash
+# 1. Database — run these in your Supabase SQL Editor, in order:
+#    setup-database.sql → seed.sql → backend/migrations/001_private_tables.sql
+
+# 2. Backend
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # then fill in your keys
+uvicorn app.main:app --reload --port 3000
+
+# 3. Frontend — open index.html, set SUPABASE/APIKEY/BACKEND_URL at the top
+```
+
+Full setup details: [backend/README.md](./backend/README.md) · Demo script: [docs/demo-script.md](./docs/demo-script.md) · Architecture: [ARCHITECTURE.md](./ARCHITECTURE.md)
+
 ---
 
 ## Context
