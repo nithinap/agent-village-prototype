@@ -29,8 +29,8 @@ async def run_worker():
                 try:
                     queries.lock_job(job_id)
                     result = await handle_public_act(agent_id)
-                    queries.complete_job(job_id)
                     queries.reschedule_job(agent_id, "public_act", delay_minutes=120)
+                    queries.complete_job(job_id)
                     log.info("Agent %s: %s", agent_id, result.get("action_type", "unknown"))
                 except Exception:
                     log.exception("Failed to process job %s for agent %s", job_id, agent_id)
