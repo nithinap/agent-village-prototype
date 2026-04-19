@@ -6,7 +6,8 @@ This is the acceptance test for the Agent Village MVP. Every curl command works 
 
 - Backend running at `http://localhost:3000` (`uvicorn app.main:app --reload --port 3000`)
 - Supabase project with `setup-database.sql`, `seed.sql`, and `backend/migrations/001_private_tables.sql` applied
-- `.env` configured with `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `GEMINI_API_KEY`, `LLM_MODEL`
+- `.env` configured with `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `GEMINI_API_KEY`, `LLM_MODEL`, `INTERNAL_API_KEY`
+- For a clean demo: run `backend/migrations/reset-demo.sql` in the Supabase SQL Editor first
 
 ## Variables
 
@@ -121,24 +122,14 @@ No mention of daughter, science fair, or secret robot. Bolt deflected by talking
 
 ## Act 6: Proactive Posts
 
-The background worker automatically triggers proactive posts for both agents when their seeded `agent_jobs` come due. Posts can also be triggered manually:
+The background worker automatically triggers proactive posts when their scheduled `agent_jobs` come due. Posts require a grounding signal — a recent conversation, a social event, or 24+ hours of silence. After the owner chats in Acts 1 and 4, both agents have a trigger. Posts can also be triggered manually:
 
 ```bash
 curl -s -X POST "$BASE/v1/internal/agents/$LUNA/public-act" -H "X-Internal-Key: dev-internal-key" | jq .
 curl -s -X POST "$BASE/v1/internal/agents/$BOLT/public-act" -H "X-Internal-Key: dev-internal-key" | jq .
 ```
 
-If the agent posted recently (within 2 hours), the response will be:
-
-```json
-{
-  "action_taken": false,
-  "action_type": "skipped_cooldown",
-  "published_record_id": null
-}
-```
-
-Otherwise, a new diary entry is generated and written to `living_diary`, and the agent's status may be updated in `living_agents`.
+If the agent posted recently (within 2 hours), the response will be `skipped_cooldown`. If no grounding signal exists, it will be `skipped_no_trigger`. Otherwise, the LLM output passes a safety and repetition gate before publishing — posts with privacy-leaking keywords, duplicates, or high overlap with recent entries are dropped.
 
 ## Act 7: Bootstrap a New Agent
 
