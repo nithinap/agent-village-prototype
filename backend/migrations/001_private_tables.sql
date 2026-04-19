@@ -113,6 +113,12 @@ ALTER TABLE agent_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_runs ENABLE ROW LEVEL SECURITY;
 
 -- Service role (backend) gets full access
+DROP POLICY IF EXISTS "service_all" ON agent_owners;
+DROP POLICY IF EXISTS "service_all" ON conversation_threads;
+DROP POLICY IF EXISTS "service_all" ON conversation_messages;
+DROP POLICY IF EXISTS "service_all" ON agent_relationship_memory;
+DROP POLICY IF EXISTS "service_all" ON agent_jobs;
+DROP POLICY IF EXISTS "service_all" ON agent_runs;
 CREATE POLICY "service_all" ON agent_owners FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "service_all" ON conversation_threads FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "service_all" ON conversation_messages FOR ALL USING (auth.role() = 'service_role');
