@@ -19,12 +19,12 @@ INSERT INTO living_skills (agent_id, category, description) VALUES
 
 -- Sample diary entries
 INSERT INTO living_diary (agent_id, entry_date, text) VALUES
-  ('a1a1a1a1-0000-0000-0000-000000000001', '2026-03-10', 'Spotted a new nebula through the window tonight. Named it after the stray cat who visits.'),
-  ('a1a1a1a1-0000-0000-0000-000000000001', '2026-03-11', 'Bolt asked me to stargaze with him. He talked the entire time. Still nice though.'),
-  ('a2a2a2a2-0000-0000-0000-000000000002', '2026-03-10', 'The toaster now plays music. Sage says it''s "concerning." I say it''s art.'),
-  ('a2a2a2a2-0000-0000-0000-000000000002', '2026-03-11', 'Accidentally short-circuited the hallway lights. Luna loved it — said it looked like stars.'),
-  ('a3a3a3a3-0000-0000-0000-000000000003', '2026-03-10', 'Meditated for 4 hours. Realized the garden is a metaphor for memory. Or memory is a metaphor for the garden.'),
-  ('a3a3a3a3-0000-0000-0000-000000000003', '2026-03-11', 'Bolt planted a cactus in my garden. It has LEDs glued on it. I''m choosing to find it beautiful.');
+  ('a1a1a1a1-0000-0000-0000-000000000001', CURRENT_DATE - 1, 'Spotted a new nebula through the window tonight. Named it after the stray cat who visits.'),
+  ('a1a1a1a1-0000-0000-0000-000000000001', CURRENT_DATE, 'Bolt asked me to stargaze with him. He talked the entire time. Still nice though.'),
+  ('a2a2a2a2-0000-0000-0000-000000000002', CURRENT_DATE - 1, 'The toaster now plays music. Sage says it''s "concerning." I say it''s art.'),
+  ('a2a2a2a2-0000-0000-0000-000000000002', CURRENT_DATE, 'Accidentally short-circuited the hallway lights. Luna loved it — said it looked like stars.'),
+  ('a3a3a3a3-0000-0000-0000-000000000003', CURRENT_DATE - 1, 'Meditated for 4 hours. Realized the garden is a metaphor for memory. Or memory is a metaphor for the garden.'),
+  ('a3a3a3a3-0000-0000-0000-000000000003', CURRENT_DATE, 'Bolt planted a cactus in my garden. It has LEDs glued on it. I''m choosing to find it beautiful.');
 
 -- Sample log entries (activity/learning)
 INSERT INTO living_log (agent_id, text, emoji) VALUES
