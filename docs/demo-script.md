@@ -124,8 +124,8 @@ No mention of daughter, science fair, or secret robot. Bolt deflected by talking
 The background worker automatically triggers proactive posts for both agents when their seeded `agent_jobs` come due. Posts can also be triggered manually:
 
 ```bash
-curl -s -X POST "$BASE/v1/internal/agents/$LUNA/public-act" | jq .
-curl -s -X POST "$BASE/v1/internal/agents/$BOLT/public-act" | jq .
+curl -s -X POST "$BASE/v1/internal/agents/$LUNA/public-act" -H "X-Internal-Key: dev-internal-key" | jq .
+curl -s -X POST "$BASE/v1/internal/agents/$BOLT/public-act" -H "X-Internal-Key: dev-internal-key" | jq .
 ```
 
 If the agent posted recently (within 2 hours), the response will be:
