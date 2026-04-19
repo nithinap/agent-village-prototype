@@ -47,10 +47,10 @@ def get_recent_messages(thread_id: str, limit: int = 20) -> list[dict]:
     r = (db.table("conversation_messages")
          .select("role, body, created_at")
          .eq("thread_id", thread_id)
-         .order("created_at", desc=False)
+         .order("created_at", desc=True)
          .limit(limit)
          .execute())
-    return r.data
+    return list(reversed(r.data))
 
 
 def insert_message(thread_id: str, agent_id: str, role: str, body: str) -> dict:
