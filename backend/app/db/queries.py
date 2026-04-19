@@ -169,6 +169,12 @@ def complete_job(job_id: str):
     db.table("agent_jobs").update({"completed_at": datetime.now(timezone.utc).isoformat()}).eq("id", job_id).execute()
 
 
+def unlock_job(job_id: str):
+    """Clear lock so the job can be retried on the next poll."""
+    db = get_supabase()
+    db.table("agent_jobs").update({"locked_at": None}).eq("id", job_id).execute()
+
+
 def reschedule_job(agent_id: str, job_type: str = "public_act", delay_minutes: int = 120):
     """Create a new job scheduled delay_minutes from now."""
     from datetime import datetime, timezone, timedelta

@@ -34,6 +34,7 @@ async def run_worker():
                     log.info("Agent %s: %s", agent_id, result.get("action_type", "unknown"))
                 except Exception:
                     log.exception("Failed to process job %s for agent %s", job_id, agent_id)
+                    queries.unlock_job(job_id)
 
         except Exception:
             log.exception("Worker tick failed")
