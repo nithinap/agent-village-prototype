@@ -100,6 +100,33 @@ def _check_public_post(text: str, recent_diary: list[dict]) -> str | None:
     return None
 
 
+def _check_public_status(status: str | None, current_status: str | None) -> str | None:
+    """Return a drop reason string, or None if the status is safe to publish."""
+    if status is None:
+        return None
+
+    status = status.strip()
+    if not status:
+        return "empty"
+
+    if len(status) < 4:
+        return "too_short"
+
+    lower = status.lower()
+    for signal in _PRIVATE_SIGNALS:
+        if signal in lower:
+            return f"private_leak:{signal}"
+
+    if current_status and lower == current_status.strip().lower():
+        return "duplicate"
+
+    # Reject low-signal filler that doesn't add meaningful public state.
+    if lower in {"thinking", "still thinking", "existing", "here", "idle"}:
+        return "generic"
+
+    return None
+
+
 async def handle_owner_chat(agent_id: str, owner_id: str, message: str) -> dict:
     """Full owner chat flow: load context → call LLM → store memory."""
     t0 = time.time()
@@ -230,8 +257,15 @@ async def handle_public_act(agent_id: str) -> dict:
         return {"action_taken": False, "action_type": f"dropped_{drop_reason}"}
 
     record = queries.insert_diary(agent_id, diary_text)
-    if new_status and isinstance(new_status, str) and new_status.strip():
-        queries.update_agent_status(agent_id, new_status.strip())
+    if isinstance(new_status, str):
+        status_drop_reason = _check_public_status(new_status, agent.get("status"))
+        if status_drop_reason is None:
+            queries.update_agent_status(agent_id, new_status.strip())
+        else:
+            await log_run(agent_id, "proactive_post",
+                          input_summary=f"dropped_status: {status_drop_reason}",
+                          output_type="dropped",
+                          success=True)
 
     latency = int((time.time() - t0) * 1000)
     await log_run(agent_id, "proactive_post",
