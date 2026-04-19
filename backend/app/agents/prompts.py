@@ -123,7 +123,7 @@ def build_public_post_prompt(
     recent_activity: list[dict],
 ) -> list[dict]:
     diary_text = "\n".join(f"- {d['text']}" for d in recent_diary) if recent_diary else "(no recent entries)"
-    activity_text = "\n".join(f"- {a.get('text', '')}" for a in recent_activity) if recent_activity else "(quiet)"
+    activity_text = "\n".join(f"- [{a.get('event_type', '?')}] {a.get('content', '')}" for a in recent_activity) if recent_activity else "(quiet)"
     system = PUBLIC_POST_SYSTEM.format(
         name=agent_profile["name"],
         identity=_identity_block(agent_profile),
