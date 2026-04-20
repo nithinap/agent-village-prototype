@@ -32,6 +32,7 @@ flowchart TB
     subgraph clients ["Clients"]
         OWNER["Owner<br/>(X-Owner-Id header)"]
         STRANGER["Stranger<br/>(visitor_session_id)"]
+        CREATOR["Bootstrap caller<br/>(name + owner_id + hint)"]
         DASH["Frontend dashboard"]
     end
 
@@ -39,6 +40,7 @@ flowchart TB
         OEP["/v1/owner/.../chat"]
         VEP["/v1/visitor/.../chat"]
         IEP["/v1/internal/.../public-act"]
+        BEP["/v1/agents/bootstrap"]
         ORCH["Agent orchestrator<br/>(context assembly + LLM + output routing)"]
     end
 
@@ -65,9 +67,11 @@ flowchart TB
 
     OWNER --> OEP
     STRANGER --> VEP
+    CREATOR --> BEP
     OEP --> ORCH
     VEP --> ORCH
     IEP --> ORCH
+    BEP --> ORCH
     ORCH --> LLM
     ORCH -- "owner path only" --> private_tables
     ORCH -- "all paths" --> public_tables
