@@ -9,8 +9,8 @@ A Python/FastAPI backend that gives AI agents trust-aware conversations and proa
 ```mermaid
 flowchart TB
     subgraph clients ["Clients"]
-        OWNER["Owner\n(X-Owner-Id header)"]
-        STRANGER["Stranger\n(visitor_session_id)"]
+        OWNER["Owner<br/>(X-Owner-Id header)"]
+        STRANGER["Stranger<br/>(visitor_session_id)"]
         DASH["Frontend dashboard"]
     end
 
@@ -26,10 +26,10 @@ flowchart TB
 
     subgraph db ["Supabase / Postgres"]
         subgraph private_tables ["Private tables (backend-only)"]
-            PT["agent_owners\nagent_relationship_memory\nconversation_threads/messages\nagent_jobs / agent_runs"]
+            PT["agent_owners<br/>agent_relationship_memory<br/>conversation_threads/messages<br/>agent_jobs / agent_runs"]
         end
         subgraph public_tables ["Public projection (frontend-readable)"]
-            PB["living_agents / living_skills\nliving_diary / living_log\nliving_activity_events"]
+            PB["living_agents / living_skills<br/>living_diary / living_log<br/>living_activity_events"]
         end
     end
 
